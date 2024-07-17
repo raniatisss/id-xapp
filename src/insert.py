@@ -20,10 +20,12 @@ This Module is temporary for pushing data into influxdb before dpeloyment of AD 
 
 import datetime
 import time
+import sys
 import pandas as pd
 from database import DATABASE
-from configparser import ConfigParser
+from mdclogpy import Logger
 
+logger = Logger(name=__name__)
 
 class INSERTDATA(DATABASE):
 
@@ -31,40 +33,28 @@ class INSERTDATA(DATABASE):
         super().__init__()
         self.config()
         self.connect()
-#        self.dropdb('RIC-Test')
-        self.createdb('RIC-Test')
-
-    def config(self):
-        cfg = ConfigParser()
-        cfg.read('ad_config.ini')
-        for section in cfg.sections():
-            if section == 'influxdb':
-                self.host = cfg.get(section, "host")
-                self.port = cfg.get(section, "port")
-                self.user = cfg.get(section, "user")
-                self.password = cfg.get(section, "password")
-                self.path = cfg.get(section, "path")
-                self.ssl = cfg.get(section, "ssl")
-                self.dbname = cfg.get(section, "database")
-                self.meas = cfg.get(section, "measurement")
+        self.createdb(self.dbname)
 
     def createdb(self, dbname):
         if dbname not in self.client.get_list_database():
-            print("Create database: " + dbname)
+            logger.info(f"Create database: {dbname}")
             self.client.create_database(dbname)
             self.client.switch_database(dbname)
 
     def dropdb(self, dbname):
         if next((item for item in self.client.get_list_database() if item.get("name") == dbname), None) is not None:
-            print("DROP database: " + dbname)
+            logger.info(f"DROP database: {dbname}")
             self.client.drop_database(dbname)
-
+    
     def dropmeas(self, measname):
-        print("DROP MEASUREMENT: " + measname)
+        logger.info(f"DROP MEASUREMENT: {measname}")
         self.client.query('DROP MEASUREMENT '+measname)
 
     def assign_timestamp(self, df):
         steps = df['measTimeStampRf'].unique()
+
+        logger.info(f"Add data to measurement {self.meas}")
+        
         for timestamp in steps:
             d = df[df['measTimeStampRf'] == timestamp]
             d.index = pd.date_range(start=datetime.datetime.now(), freq='1ms', periods=len(d))
@@ -72,13 +62,14 @@ class INSERTDATA(DATABASE):
             time.sleep(0.7)
 
 
-def populatedb():
+def main():
     # inintiate connection and create database UEDATA
     db = INSERTDATA()
-    df = pd.read_csv('ue.csv')
+    df = pd.read_csv('ue.csv')   
     while True:
         db.assign_timestamp(df)
+        db.dropmeas(db.meas)
 
 
 if __name__ == "__main__":
-    populatedb()
+    main()

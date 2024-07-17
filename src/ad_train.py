@@ -110,7 +110,7 @@ class ModelTraining(object):
         self.train_data = ps.data
 
         self.actual = (self.test_data[self.db.anomaly] > 0).astype(int)
-        num = joblib.load('src/num_params')
+        num = joblib.load('/opt/ad/src/num_params')
         ps = PREPROCESS(self.test_data[num])
         ps.transform()
         self.test_data = ps.data
@@ -124,6 +124,6 @@ class ModelTraining(object):
         models.append(model)
 
         opt = scores.index(max(scores))
-        joblib.dump(models[opt], 'src/model')
+        joblib.dump(models[opt], '/opt/ad/src/model')
         logger.info("Optimum f-score : {}".format(scores[opt]))
         logger.info("Training Ends : ")

@@ -20,6 +20,7 @@ from configparser import ConfigParser
 from mdclogpy import Logger
 from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
 from requests.exceptions import RequestException, ConnectionError
+import os
 
 logger = Logger(name=__name__)
 
@@ -48,15 +49,8 @@ class DATABASE(object):
         fetched data from database
     """
 
-    def __init__(self, dbname='Timeseries', user='root', password='root', host="r4-influxdb.ricplt", port='8086', path='', ssl=False):
+    def __init__(self):
         self.data = None
-        self.host = host
-        self.port = port
-        self.user = user
-        self.password = password
-        self.path = path
-        self.ssl = ssl
-        self.dbname = dbname
         self.client = None
         self.config()
 
@@ -65,7 +59,7 @@ class DATABASE(object):
             self.client.close()
 
         try:
-            self.client = DataFrameClient(self.host, port=self.port, username=self.user, password=self.password, path=self.path, ssl=self.ssl, database=self.dbname, verify_ssl=self.ssl)
+            self.client = DataFrameClient(self.host, port=self.port, username=self.user, password=self.password, database=self.dbname)
             version = self.client.request('ping', expected_response_code=204).headers['X-Influxdb-Version']
             logger.info("Conected to Influx Database, InfluxDB version : {}".format(version))
             return True
@@ -74,7 +68,7 @@ class DATABASE(object):
             logger.error("Failed to establish a new connection with InflulxDB, Please check your url/hostname")
             time.sleep(120)
 
-    def read_data(self, train=False, valid=False, limit=False):
+    def read_data(self, train=False, valid=False):
         """Read data method for a given measurement and limit
 
         Parameters
@@ -83,15 +77,14 @@ class DATABASE(object):
         limit:int (defualt=False)
         """
         self.data = None
-        query = 'select * from ' + self.meas
-        if not train and not valid and not limit:
-            query += ' where time>now()-1600ms'
+
+        if not train and not valid:
+            query = f'select * from {self.meas} where time>now()-1600ms'
         elif train:
-            query += ' where time<now()-5m and time>now()-75m'
+            query = f'select * from {self.meas} where time<now()-5m and time>now()-75m'
         elif valid:
-            query += ' where time>now()-5m'
-        elif limit:
-            query += ' where time>now()-1m limit '+str(limit)
+            query = f'select * from {self.meas} where time>now()-5m'
+
         result = self.query(query)
         if result and len(result[self.meas]) != 0:
             self.data = result[self.meas]
@@ -119,17 +112,16 @@ class DATABASE(object):
 
     def config(self):
         cfg = ConfigParser()
-        cfg.read('src/ad_config.ini')
+        config_file_path = os.getenv('XAPP_CONFIG_PATH')
+        cfg.read(config_file_path)
         for section in cfg.sections():
             if section == 'influxdb':
                 self.host = cfg.get(section, "host")
                 self.port = cfg.get(section, "port")
                 self.user = cfg.get(section, "user")
-                self.password = cfg.get(section, "password")
-                self.path = cfg.get(section, "path")
-                self.ssl = cfg.get(section, "ssl")
+                self.password = os.getenv('INFLUXDB_PASSWORD')
                 self.dbname = cfg.get(section, "database")
-                self.meas = cfg.get(section, "measurement")
+                self.meas = cfg.get(section, "table")
 
             if section == 'features':
                 self.thpt = cfg.get(section, "thpt")
@@ -140,25 +132,3 @@ class DATABASE(object):
                 self.ue = cfg.get(section, "ue")
                 self.anomaly = cfg.get(section, "anomaly")
                 self.a1_param = cfg.get(section, "a1_param")
-
-
-class DUMMY(DATABASE):
-
-    def __init__(self):
-        super().__init__()
-        self.ue_data = pd.read_csv('src/ue.csv')
-
-    def connect(self):
-        return True
-
-    def read_data(self, train=False, valid=False, limit=100000):
-        if not train:
-            self.data = self.ue_data.head(limit)
-        else:
-            self.data = self.ue_data.head(limit).drop(self.anomaly, axis=1)
-
-    def write_anomaly(self, df, meas_name='AD'):
-        pass
-
-    def query(self, query=None):
-        return {'UEReports': self.ue_data.head(1)}

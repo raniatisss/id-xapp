@@ -72,14 +72,14 @@ class PREPROCESS(object):
     def fit_transform(self):
         """ use normalizer transformation to bring all parameters in same scale """
         scale = Normalizer().fit(self.data)
-        joblib.dump(scale, 'src/scale')
+        joblib.dump(scale, '/opt/ad/src/scale')
 
     def transform(self):
-        scale = joblib.load('src/scale')
+        scale = joblib.load('/opt/ad/src/scale')
         self.data = pd.DataFrame(scale.transform(self.data), columns=self.data.columns)
 
     def save_cols(self):
-        joblib.dump(self.data.columns, 'src/num_params')
+        joblib.dump(self.data.columns, '/opt/ad/src/num_params')
 
     def process(self):
         """

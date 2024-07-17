@@ -37,14 +37,14 @@ class modelling(object):
 
     def load_model(self):
         try:
-            with open('src/model', 'rb') as f:
+            with open('/opt/ad/src/model', 'rb') as f:
                 self.model = joblib.load(f)
         except FileNotFoundError:
             logger.error("Model Does not exsist")
 
     def load_param(self):
         try:
-            with open('src/num_params', 'rb') as f:
+            with open('/opt/ad/src/num_params', 'rb') as f:
                 self.num = joblib.load(f)
 
         except FileNotFoundError:
@@ -52,7 +52,7 @@ class modelling(object):
 
     def load_scale(self):
         try:
-            with open('src/scale', 'rb') as f:
+            with open('/opt/ad/src/scale', 'rb') as f:
                 self.scale = joblib.load(f)
         except FileNotFoundError:
             logger.error("Scale file does not exsist")

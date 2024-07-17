@@ -24,7 +24,7 @@ from ricxappframe.xapp_sdl import SDLWrapper
 from mdclogpy import Logger
 from ad_model import modelling, CAUSE
 from ad_train import ModelTraining
-from database import DATABASE, DUMMY
+from database import DATABASE
 
 db = None
 cp = None
@@ -57,7 +57,7 @@ def load_model():
 
 
 def train_model():
-    if not os.path.isfile('src/model'):
+    if not os.path.isfile('/opt/ad/src/model'):
         mt = ModelTraining(db)
         mt.train()
 
@@ -109,6 +109,9 @@ def predict_anomaly(self, df):
             result = json.loads(df_a.loc[:, cols].to_json(orient='records'))
             val = json.dumps(result).encode()
     df.loc[:, 'RRU.PrbUsedDl'] = df['RRU.PrbUsedDl'].astype('float')
+    df['Viavi.UE.anomalies'] = df['Viavi.UE.anomalies'].astype('int64')
+    df['du-id'] = df['du-id'].astype('int64')
+
     df.index = pd.date_range(start=df.index[0], periods=len(df), freq='1ms')
     db.write_anomaly(df)
     return val
@@ -133,10 +136,7 @@ def msg_to_ts(self, val):
 def connectdb(thread=False):
     # Create a connection to InfluxDB if thread=True, otherwise it will create a dummy data instance
     global db
-    if thread:
-        db = DUMMY()
-    else:
-        db = DATABASE()
+    db = DATABASE()
     success = False
     while not success:
         success = db.connect()
@@ -186,7 +186,16 @@ def buildPolicyResp(self, req: dict):
 
 
 def start(thread=False):
-    # Initiates xapp api and runs the entry() using xapp.run()
-    xapp = Xapp(entrypoint=entry, rmr_port=4560, use_fake_sdl=False)
-    logger.debug("AD xApp starting")
-    xapp.run()
+    try:
+        # Initiates xapp api and runs the entry() using xapp.run()
+        xapp = Xapp(entrypoint=entry, rmr_port=4560, use_fake_sdl=False)
+        logger.debug("AD xApp starting")
+        xapp.run()
+    except Exception as e:
+        logger.exception(e)
+    finally:
+        xapp.stop()
+
+
+if __name__ == "__main__":
+    start()
