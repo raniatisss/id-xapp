@@ -22,8 +22,8 @@ import schedule
 from ricxappframe.xapp_frame import Xapp, rmr
 from ricxappframe.xapp_sdl import SDLWrapper
 from mdclogpy import Logger
-from ad_model import modelling, CAUSE
-from ad_train import ModelTraining
+from id_model import modelling, CAUSE
+from id_train import ModelTraining
 from database import DATABASE
 
 db = None
@@ -52,12 +52,12 @@ def load_model():
     global threshold
     md = modelling()
     cp = CAUSE()
-    threshold = 70
-    logger.info("throughput threshold parameter is set as {}% (default)".format(threshold))
+    threshold = 5
+    logger.info("threshold parameter is set as {} dB (default)".format(threshold))
 
 
 def train_model():
-    if not os.path.isfile('/opt/ad/src/model'):
+    if not os.path.isfile('/opt/id/src/model'):
         mt = ModelTraining(db)
         mt.train()
 
@@ -80,13 +80,13 @@ def predict(self):
         logger.warning("No data in last 1 second")
         time.sleep(1)
     if (val is not None) and (len(val) > 2):
-        msg_to_ts(self, val)
+        msg_to_fbs(self, val)
 
 
 def predict_anomaly(self, df):
     """ calls ad_predict to detect if given sample is normal or anomalous
     find out the degradation type if sample is anomalous
-    write given sample along with predicted label to AD measurement
+    write given sample along with predicted label to ID measurement
 
     Parameter
     ........
@@ -96,12 +96,12 @@ def predict_anomaly(self, df):
     ......
     val: anomalus sample info(UEID, DUID, TimeStamp, Degradation type)
     """
-    df['Anomaly'] = md.predict(df)
+    df['anomaly'] = md.predict(df)
     df.loc[:, 'Degradation'] = ''
     val = None
-    if 1 in df.Anomaly.unique():
-        df.loc[:, ['Anomaly', 'Degradation']] = cp.cause(df, db, threshold)
-        df_a = df.loc[df['Anomaly'] == 1].copy()
+    if 1 in df.anomaly.unique():
+        df.loc[:, ['anomaly', 'Degradation']] = cp.cause(df, db, threshold)
+        df_a = df.loc[df['anomaly'] == 1].copy()
         if len(df_a) > 0:
             df_a['time'] = df_a.index
             cols = [db.ue, 'time', 'Degradation']
@@ -117,17 +117,17 @@ def predict_anomaly(self, df):
     return val
 
 
-def msg_to_ts(self, val):
-    # send message from ad to ts
-    logger.debug("Sending Anomalous UE to TS")
+def msg_to_fbs(self, val):
+    # send message from ID to FBS
+    logger.debug("Sending Anomalous UE to FBS")
     success = self.rmr_send(val, 30003)
     if success:
-        logger.info(" Message to TS: message sent Successfully")
+        logger.info(" Message to FBS: message sent Successfully")
         # rmr receive to get the acknowledgement message from the traffic steering.
 
     for summary, sbuf in self.rmr_get_messages():
         if sbuf.contents.mtype == 30004:
-            logger.info("Received acknowldgement from TS (TS_ANOMALY_ACK): {}".format(summary))
+            logger.info("Received acknowldgement from FBS (FBS_ANOMALY_ACK): {}".format(summary))
         if sbuf.contents.mtype == 20010:
             a1_request_handler(self, summary, sbuf)
         self.rmr_free(sbuf)
@@ -167,7 +167,7 @@ def change_threshold(self, req: dict):
     if req["operation"] == "CREATE":
         payload = req["payload"]
         threshold = json.loads(payload)[db.a1_param]
-        logger.info("throughput threshold parameter updated to: {}% ".format(threshold))
+        logger.info("threshold parameter updated to: {}dB ".format(threshold))
 
 
 def verifyPolicy(req: dict):
@@ -178,7 +178,7 @@ def verifyPolicy(req: dict):
 
 
 def buildPolicyResp(self, req: dict):
-    req["handler_id"] = "ad"
+    req["handler_id"] = "id"
     del req["operation"]
     del req["payload"]
     req["status"] = "OK"
@@ -189,7 +189,7 @@ def start(thread=False):
     try:
         # Initiates xapp api and runs the entry() using xapp.run()
         xapp = Xapp(entrypoint=entry, rmr_port=4560, use_fake_sdl=False)
-        logger.debug("AD xApp starting")
+        logger.debug("ID xApp starting")
         xapp.run()
     except Exception as e:
         logger.exception(e)

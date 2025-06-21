@@ -41,15 +41,11 @@ class PREPROCESS(object):
            Columns that are not useful for the prediction will be dropped(UEID, Category, & Timestamp)
         """
         self.data = data
-        self.convert_gb_to_mb()
 
     def variation(self):
         """ drop the constant parameters """
         if len(self.data) > 1:
             self.data = self.data.loc[:, self.data.apply(pd.Series.nunique) != 1]
-
-    def convert_gb_to_mb(self):
-        self.data.iloc[:]['DRB.UEThpDl'] = self.data['DRB.UEThpDl'].apply(lambda x: x*1024)
 
     def numerical_data(self):
         """  Filters only numeric data types """
@@ -72,14 +68,14 @@ class PREPROCESS(object):
     def fit_transform(self):
         """ use normalizer transformation to bring all parameters in same scale """
         scale = Normalizer().fit(self.data)
-        joblib.dump(scale, '/opt/ad/src/scale')
+        joblib.dump(scale, '/opt/id/src/scale')
 
     def transform(self):
-        scale = joblib.load('/opt/ad/src/scale')
+        scale = joblib.load('/opt/id/src/scale')
         self.data = pd.DataFrame(scale.transform(self.data), columns=self.data.columns)
 
     def save_cols(self):
-        joblib.dump(self.data.columns, '/opt/ad/src/num_params')
+        joblib.dump(self.data.columns, '/opt/id/src/num_params')
 
     def process(self):
         """

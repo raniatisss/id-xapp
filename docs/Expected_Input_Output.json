@@ -1,0 +1,42 @@
+Expected Input
+--------------
+
+The AD Xapp expects input in following structure:
+
+  {
+  'du-id' : 1000,
+  'nrCellIdentity' : "c3/B13", 
+  'rsrp' : 84.0, 
+  'rsrq' : 65.0, 
+  'rssinr':65.0,
+  'throughput' : 5 , 
+  'ue-id' : "Waiting passenger 1", 
+  'x' : -556, 
+  'y' : -1160, 
+  'measTimeStampRf' : "2024-09-09T07:43:51.652" 
+  }
+
+Expected Output
+---------------
+
+The AD Xapp should Detect Anomulous UE's and send those UE's information
+as a JSON message via RMR with the following structure:
+
+  {
+  'ue-id' : "Waiting passenger 1",
+  'measTimeStampRf' : "2021-05-12T07:43:51.652",
+  'du-id' : 1000,
+  'Degradation': "RSRP RSRQ RSSINR Throughput "
+  }
+
+
+  { "UEPredictionSet": ["Train passenger 2"] }
+
+
+  {
+    "name of the UE":{
+        "nrCellIdentity":["rsrp", "rsrq", "rssinr", "ThptDl", "ThptUl"],
+        "nrCellIdentity":["rsrp1", "rsrq1", "rssinr1", "ThptDl1", "ThptUl1"],
+        "nrCellIdentity":["rsrp2", "rsrq2", "rssinr2", "ThptDl2", "ThptUl2"]
+    }
+}

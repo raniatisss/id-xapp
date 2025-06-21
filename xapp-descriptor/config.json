@@ -1,23 +1,24 @@
 {
-        "name": "ad-tuan",
+        "name": "id-d",
         "version": "1.0.2",
+        "APP_NAMESPACE": "djamel",
         "containers": [
             {
-                "name": "ad",
+                "name": "idinsert",
                 "image": {
                     "registry": "registry.hub.docker.com",
-                    "name": "hoangtuansu/ad",
-                    "tag": "0.1"
-                }
-            },
-            {
-                "name": "predict",
-                "image": {
-                    "registry": "registry.hub.docker.com",
-                    "name": "hoangtuansu/ad",
-                    "tag": "0.1"
+                    "name": "djamel1997/id",
+                    "tag": "1.0"
                 },
                 "command": ["sh", "-c", "python insert.py"]
+            },
+            {
+                "name": "id",
+                "image": {
+                    "registry": "registry.hub.docker.com",
+                    "name": "djamel1997/id",
+                    "tag": "1.0"
+                }
             }
         ],
         "appenv": {
@@ -27,24 +28,24 @@
             "ports": [
                 {
                     "name": "http",
-                    "container": "ad",
+                    "container": "id",
                     "port": 8080,
                     "description": "http service"
                 },
                 {
                     "name": "rmr-data",
-                    "container": "ad",
+                    "container": "id",
                     "port": 4560,
-                    "txMessages": ["TS_ANOMALY_UPDATE"],
-                    "rxMessages": ["TS_ANOMALY_ACK"],
+                    "txMessages": ["FBS_ANOMALY_UPDATE"],
+                    "rxMessages": ["FBS_ANOMALY_ACK"],
                     "policies": [],
-                    "description": "rmr receive data port for ad"
+                    "description": "rmr receive data port for id"
                 },
                 {
                     "name": "rmr-route",
-                    "container": "ad",
+                    "container": "id",
                     "port": 4561,
-                    "description": "rmr route port for ad"
+                    "description": "rmr route port for id"
                 }
             ]
         },
@@ -52,8 +53,8 @@
             "protPort": "tcp:4560",
             "maxSize": 2072,
             "numWorkers": 1,
-            "rxMessages": ["TS_ANOMALY_ACK"],
-            "txMessages": ["TS_ANOMALY_UPDATE"],
+            "rxMessages": ["FBS_ANOMALY_ACK"],
+            "txMessages": ["FBS_ANOMALY_UPDATE"],
             "policies": []
         }
 

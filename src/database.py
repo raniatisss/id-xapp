@@ -59,7 +59,7 @@ class DATABASE(object):
             self.client.close()
 
         try:
-            self.client = DataFrameClient(self.host, port=self.port, username=self.user, password=self.password, database=self.dbname)
+            self.client = DataFrameClient(host=self.host, port=self.port, username=self.user, password=self.password, database=self.dbname)
             version = self.client.request('ping', expected_response_code=204).headers['X-Influxdb-Version']
             logger.info("Conected to Influx Database, InfluxDB version : {}".format(version))
             return True
@@ -81,20 +81,20 @@ class DATABASE(object):
         if not train and not valid:
             query = f'select * from {self.meas} where time>now()-1600ms'
         elif train:
-            query = f'select * from {self.meas} where time<now()-5m and time>now()-75m'
+            query = f'select * from {self.meas} where time<now()-5000ms and time>now()-1m'
         elif valid:
-            query = f'select * from {self.meas} where time>now()-5m'
+            query = f'select * from {self.meas} where time>now()-1m'
 
         result = self.query(query)
         if result and len(result[self.meas]) != 0:
             self.data = result[self.meas]
 
-    def write_anomaly(self, df, meas='AD'):
+    def write_anomaly(self, df, meas='ID'):
         """Write data method for a given measurement
 
         Parameters
         ----------
-        meas: str (default='AD')
+        meas: str (default='ID')
         """
         try:
             self.client.write_points(df, meas)
@@ -124,7 +124,6 @@ class DATABASE(object):
                 self.meas = cfg.get(section, "table")
 
             if section == 'features':
-                self.thpt = cfg.get(section, "thpt")
                 self.rsrp = cfg.get(section, "rsrp")
                 self.rsrq = cfg.get(section, "rsrq")
                 self.rssinr = cfg.get(section, "rssinr")

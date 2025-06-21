@@ -37,14 +37,14 @@ class modelling(object):
 
     def load_model(self):
         try:
-            with open('/opt/ad/src/model', 'rb') as f:
+            with open('/opt/id/src/model', 'rb') as f:
                 self.model = joblib.load(f)
         except FileNotFoundError:
             logger.error("Model Does not exsist")
 
     def load_param(self):
         try:
-            with open('/opt/ad/src/num_params', 'rb') as f:
+            with open('/opt/id/src/num_params', 'rb') as f:
                 self.num = joblib.load(f)
 
         except FileNotFoundError:
@@ -52,7 +52,7 @@ class modelling(object):
 
     def load_scale(self):
         try:
-            with open('/opt/ad/src/scale', 'rb') as f:
+            with open('/opt/id/src/scale', 'rb') as f:
                 self.scale = joblib.load(f)
         except FileNotFoundError:
             logger.error("Scale file does not exsist")
@@ -98,30 +98,31 @@ class CAUSE(object):
         sample = df.copy()
         sample.index = range(len(sample))
         for i in range(len(sample)):
-            if sample.iloc[i]['Anomaly'] == 1:
+            if sample.loc[i, 'anomaly'] == 1:
                 query = """select * from {} where "{}" = \'{}\' and time<now() and time>now()-20s""".format(db.meas, db.ue, sample.iloc[i][db.ue])
                 normal = db.query(query)
                 if normal:
-                    normal = normal[db.meas][[db.thpt, db.rsrp, db.rsrq]]
+                    normal = normal[db.meas][[db.rssinr, db.rsrp, db.rsrq]]
                     deg = self.find(sample.loc[i, :], normal.max(), db, threshold)
                     if deg:
                         sample.loc[i, 'Degradation'] = deg
-                        if 'Throughput' in deg and ('RSRP' in deg or 'RSRQ' in deg):
-                            sample.loc[i, 'Anomaly'] = 2
+                        if 'RSSINR' in deg and ('RSRP' in deg or 'RSRQ' in deg):
+                            sample.loc[i, 'anomaly'] = 2
                         else:
-                            sample.loc[i, 'Anomaly'] = 1
+                            sample.loc[i, 'anomaly'] = 1
                     else:
-                        sample.loc[i, 'Anomaly'] = 0
-        return sample[['Anomaly', 'Degradation']].values.tolist()
+                        sample.loc[i, 'anomaly'] = 0
+        return sample[['anomaly', 'Degradation']].values.tolist()
 
     def find(self, row, l, db, threshold):
-        """ store if a particular parameter is below threshold and return """
+        """ store if a particular parameter is below threshold and return threshold = 5
+        	    RSRP < -100 dBm, RSRQ < -15 dB, RSSINR < 10 dB."""
         deg = []
-        if row[db.thpt] < l[db.thpt]*(100 - threshold)*0.01:
-            deg.append('Throughput')
-        if row[db.rsrp] < l[db.rsrp]-15:
+        if row[db.rssinr] < l[db.rssinr]-threshold:
+            deg.append('RSSINR')
+        if row[db.rsrp] < l[db.rsrp]-10:
             deg.append('RSRP')
-        if row[db.rsrq] < l[db.rsrq]-10:
+        if row[db.rsrq] < l[db.rsrq]-3:
             deg.append('RSRQ')
         if len(deg) == 0:
             deg = False

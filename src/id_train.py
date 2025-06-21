@@ -54,7 +54,7 @@ class ModelTraining(object):
         self.db.read_data(train=True)
         while self.db.data is None or len(self.db.data.dropna()) < 1000:
             logger.warning("Check if InfluxDB instance is up / Not sufficient data for Training")
-            time.sleep(120)
+            time.sleep(10)
             self.db.read_data(train=True)
         self.train_data = self.db.data
         logger.debug("Training on {} Samples".format(self.train_data.shape[0]))
@@ -64,7 +64,7 @@ class ModelTraining(object):
         self.db.read_data(valid=True)
         while self.db.data is None or len(self.db.data.dropna()) < 300:
             logger.warning("Check if InfluxDB instance is up? or Not sufficient data for Validation in last 10 minutes")
-            time.sleep(60)
+            time.sleep(10)
             self.db.read_data(valid=True)
         self.test_data = self.db.data.dropna()
         logger.debug("Validation on {} Samples".format(self.test_data.shape[0]))
@@ -110,7 +110,7 @@ class ModelTraining(object):
         self.train_data = ps.data
 
         self.actual = (self.test_data[self.db.anomaly] > 0).astype(int)
-        num = joblib.load('/opt/ad/src/num_params')
+        num = joblib.load('/opt/id/src/num_params')
         ps = PREPROCESS(self.test_data[num])
         ps.transform()
         self.test_data = ps.data
@@ -124,6 +124,6 @@ class ModelTraining(object):
         models.append(model)
 
         opt = scores.index(max(scores))
-        joblib.dump(models[opt], '/opt/ad/src/model')
+        joblib.dump(models[opt], '/opt/id/src/model')
         logger.info("Optimum f-score : {}".format(scores[opt]))
         logger.info("Training Ends : ")

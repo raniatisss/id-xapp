@@ -15,7 +15,7 @@
 # ==================================================================================
 
 """
-This Module is temporary for pushing data into influxdb before dpeloyment of AD xApp. It will depreciated in future, when data will be coming through KPIMON
+This Module is temporary for pushing data into influxdb before dpeloyment of ID xApp. It will depreciated in future, when data will be coming through KPIMON
 """
 
 import datetime
@@ -24,6 +24,7 @@ import sys
 import pandas as pd
 from database import DATABASE
 from mdclogpy import Logger
+from tqdm import tqdm
 
 logger = Logger(name=__name__)
 
@@ -55,21 +56,25 @@ class INSERTDATA(DATABASE):
 
         logger.info(f"Add data to measurement {self.meas}")
         
-        for timestamp in steps:
+  # Adding progress bar with tqdm
+        for timestamp in tqdm(steps, desc="Inserting data", unit="timestamp"):
             d = df[df['measTimeStampRf'] == timestamp]
             d.index = pd.date_range(start=datetime.datetime.now(), freq='1ms', periods=len(d))
             self.client.write_points(d, self.meas)
-            time.sleep(0.7)
-
+            time.sleep(0.01)
 
 def main():
-    # inintiate connection and create database UEDATA
+    # initiate connection and create database UEDATA
     db = INSERTDATA()
-    df = pd.read_csv('ue.csv')   
+    df = pd.read_csv('ue.csv')
     while True:
+    # Insert data with progress
         db.assign_timestamp(df)
+    
+    # Drop the measurement once after the insertion process
         db.dropmeas(db.meas)
-
+        logger.info("Measurement process completed and dropped, get ready for the next round")
+    
 
 if __name__ == "__main__":
     main()
